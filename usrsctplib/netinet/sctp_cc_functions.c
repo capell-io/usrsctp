@@ -194,9 +194,9 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 						net->ssthresh = net->mtu;
 					}
 				} else {
-					net->ssthresh = net->cwnd / 2;
-					if (net->ssthresh < (net->mtu * 2)) {
-						net->ssthresh = 2 * net->mtu;
+					net->ssthresh = (net->cwnd * 3) / 4;
+					if (net->ssthresh < net->mtu) {
+						net->ssthresh = net->mtu;
 					}
 				}
 				net->cwnd = net->ssthresh;
@@ -976,10 +976,11 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 						}
 						break;
 					default:
-						incr = net->net_ack;
-						if (incr > net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable)) {
+						/* In slow start, grow linearly */
+						incr = net->mtu;
+						/*if (incr > net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable)) {
 							incr = net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable);
-						}
+						}*/
 						break;
 					}
 					net->cwnd += incr;
@@ -1163,9 +1164,15 @@ sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 			net->ssthresh = net->mtu;
 		}
 	} else {
-		net->ssthresh = max(net->cwnd / 2, 4 * net->mtu);
+		net->ssthresh = max((net->cwnd * 3) / 4, 4 * net->mtu);
+		if (net->ssthresh < net->flight_size + (2 * net->mtu)) {
+			net->ssthresh = net->flight_size + (2 * net->mtu);
+		}
+		if (net->ssthresh < (4 * net->mtu)) {
+			net->ssthresh = (4 * net->mtu);
+		}
 	}
-	net->cwnd = net->mtu;
+	net->cwnd = net->ssthresh;
 	net->partial_bytes_acked = 0;
 #if defined(__FreeBSD__) && !defined(__Userspace__)
 	SDT_PROBE5(sctp, cwnd, net, to,
