@@ -15,6 +15,7 @@
  */
 
 #include "netinet/sctp_callout.h"
+#include "netinet/sctp_pcb.h"     /* indirectly includes system_base_info struct definition */
 #include "netinet/sctputil.h"
 #include "bbr.h"
 #include <errno.h>
@@ -196,9 +197,9 @@ void user_bbr_on_ack(struct user_bbr *bbr, const struct user_bbr_rate_sample *rs
     		}
 		}
         // if(bw_sample_scaled > bbr->bw_latest){
-        //     // bw pkts/usec >> BW_SCALE
-		// 	uint64_t bw_bps = (uint64_t)(bw_sample_scaled * bbr->mss_bytes) * 1000000ULL / (uint64_t)USER_BBR_BW_UNIT;
-        //     printf("[BBR][BW] new bw sample: %llu kbps\n", bw_bps / 1000ULL);
+            // bw pkts/usec >> BW_SCALE
+			// uint64_t bw_bps = (uint64_t)(bw_sample_scaled * bbr->mss_bytes) * 1000000ULL / (uint64_t)USER_BBR_BW_UNIT;
+			// SCTPDBG(SCTP_DEBUG_ALL, "[BBR][BW] new bw sample: %llu kbps\n", bw_bps / 1000ULL, bw_bps / 1000ULL);
         // }
 		bbr->bw_latest = MAX(bbr->bw_latest, bw_sample_scaled);
 		if (rs.delivered > 0)
@@ -309,7 +310,8 @@ void user_bbr_on_timer(struct user_bbr *bbr, uint64_t now_us) {
 	if (now_us == 0)
 		now_us = user_bbr_now_usec();
 
-	printf("[BBR][TIMER] PROBE_RTT timeout\n");
+	SCTPDBG(SCTP_DEBUG_ALL, "[BBR][TIMER] PROBE_RTT timeout on");
+	
 	bbr_check_probe_rtt_done(bbr, now_us);
 
 	/* Optionally, if long time since cycle_start, advance bw window to avoid stale data */
@@ -393,12 +395,12 @@ static void bbr_update_min_rtt(struct user_bbr *bbr, const struct user_bbr_rate_
 	 /* Track recent windowed min_rtt */
 	if (rs->rtt_us > 0) {
         if ((int32_t)bbr->probe_rtt_min_us == -1 || rs->rtt_us < (int32_t)bbr->probe_rtt_min_us) {
-			printf("[BBR][update_min_rtt] new probe_rtt_min_us: %u us (old %u us)\n", rs->rtt_us, bbr->probe_rtt_min_us);
+			SCTPDBG(SCTP_DEBUG_ALL, "[BBR][update_min_rtt] new probe_rtt_min_us: %u us (old %u us)\n", rs->rtt_us, bbr->probe_rtt_min_us);
             bbr->probe_rtt_min_us = rs->rtt_us;
             bbr->probe_rtt_min_stamp_us = now_us;
 		} 
 		if((int32_t)bbr->min_rtt_us == -1 || rs->rtt_us < (int32_t)bbr->min_rtt_us) {
-			printf("[BBR][update_min_rtt] new min_rtt_us: %u us (old %u us)\n", rs->rtt_us, bbr->min_rtt_us);
+			SCTPDBG(SCTP_DEBUG_ALL, "[BBR][update_min_rtt] new min_rtt_us: %u us (old %u us)\n", rs->rtt_us, bbr->min_rtt_us);
 			bbr->min_rtt_us = rs->rtt_us;
 			bbr->min_rtt_stamp_us = now_us;
 		}
@@ -420,7 +422,9 @@ static void bbr_update_min_rtt(struct user_bbr *bbr, const struct user_bbr_rate_
 
 		bbr->probe_rtt_round_done = false;
 		/* the caller should detect that app-limited is toggled accordingly */
-		printf("[BBR][update_min_rtt] rrt expire, entering PROBE_RTT mode, min_rtt_us=%u, store prior cwnd=%u, prior mode=%d\n", bbr->min_rtt_us, bbr->prior_snd_cwnd_bytes, bbr->prior_mode);
+		SCTPDBG(SCTP_DEBUG_ALL, "[BBR][update_min_rtt] rrt expire, entering PROBE_RTT mode, \
+			min_rtt_us=%u, store prior cwnd=%u, prior mode=%d\n", bbr->min_rtt_us, bbr->prior_snd_cwnd_bytes, bbr->prior_mode);
+
 	}
 }
 
@@ -444,7 +448,7 @@ static void bbr_exit_probe_rtt(struct user_bbr *bbr) {
     bbr->probe_rtt_done_time_us = 0;
     bbr->probe_rtt_round_done = false;
 
-	printf("[BBR][PROBE_RTT] exiting PROBE_RTT, restoring cwnd to %u bytes\n",
+	SCTPDBG(SCTP_DEBUG_ALL, "[BBR][PROBE_RTT] exiting PROBE_RTT, restoring cwnd to %u bytes\n",
 	       bbr->prior_snd_cwnd_bytes);
 }
 
@@ -629,15 +633,14 @@ static void bbr_update_model(struct user_bbr *bbr, const struct user_bbr_rate_sa
 			                       USER_BBR_SCALE)) {
 				bbr->full_bw = bmax;
 				bbr->full_bw_cnt = 0;
-				printf("[BBR][STARTUP][UPDATE MODEL] growing 1.25x\n");
-
+				SCTPDBG(SCTP_DEBUG_ALL, "[BBR][STARTUP][UPDATE MODEL] growing 1.25x\n");
 			} else {
 				bbr->full_bw_cnt++;
-				printf("[BBR][STARTUP][UPDATE MODEL] not growing 1.25x, cnt =%u, curent full bw %u, previous %u\n", bbr->full_bw_cnt, bbr->full_bw, prev_full_bw);
+				SCTPDBG(SCTP_DEBUG_ALL, "[BBR][STARTUP][UPDATE MODEL] not growing 1.25x, cnt =%u, curent full bw %u, previous %u\n", bbr->full_bw_cnt, bbr->full_bw, prev_full_bw);
 				if (bbr->full_bw_cnt >= USER_BBR_FULL_BW_CNT) {
-					printf("[BBR][STARTUP][UPDATE MODEL]entering DRAIN phase, full bw reached, current full "
-					       "bw %u(scaled) pkt/usec, previous full bw %u (scaled)\n",
-					       bbr->full_bw, prev_full_bw);
+					SCTPDBG(SCTP_DEBUG_ALL, "[BBR][STARTUP][UPDATE MODEL]entering DRAIN phase, full bw reached, current \
+						 full bw %u(scaled) pkt/usec, previous full bw %u (scaled)\n",
+						bbr->full_bw, prev_full_bw);
 					bbr->full_bw_reached = true;
 					/* transition to PROBE_BW after STARTUP finishes */
 					if (bbr->mode == USER_BBR_MODE_STARTUP) {
@@ -689,9 +692,8 @@ static void bbr_update_cycle_phase(struct user_bbr *bbr, const struct user_bbr_r
         	bbr->mode = USER_BBR_MODE_PROBE_BW;
         	bbr->cycle_idx = USER_BBR_PHASE_PROBE_CRUISE;
         	bbr->cycle_start_time_us = now_us;
-
-        	printf("[BBR][CYCLE] exit DRAIN -> PROBE_BW, inflight=%llu bdp=%u\n",
-               	bbr->bytes_in_flight, bdp);
+			SCTPDBG(SCTP_DEBUG_ALL, "[BBR][CYCLE] exit DRAIN -> PROBE_BW, inflight=%llu bdp=%u\n",
+			   	bbr->bytes_in_flight, bdp);
     	}
     	return;
 	}
@@ -738,7 +740,7 @@ static void bbr_update_cycle_phase(struct user_bbr *bbr, const struct user_bbr_r
 }
 
 void bbr_timer_init(struct user_bbr *bbr) {
-	printf("[BBR][TIMER INIT] Initializing BBR timers\n");
+	SCTPDBG(SCTP_DEBUG_ALL, "[BBR][TIMER INIT] Initializing BBR timers\n");
 	sctp_os_timer_init(&bbr->probe_rtt_timer);
 
 	bbr->timer_ticks = sctp_get_tick_count();

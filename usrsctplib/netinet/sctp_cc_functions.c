@@ -2661,7 +2661,8 @@ static void sctp_bbr_rtt_calculated(struct sctp_tcb *stcb, struct sctp_nets *net
 
 /* bbr is not a lost-based cc algorithm, so nothing to do here */
 static void sctp_bbr_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net) {
-	printf("[BBR][Timeout] Handling timeout for net=%p\n", (void *)net);
+	// printf("[BBR][Timeout] Handling timeout for net=%p\n", (void *)net);
+	SCTPDBG(SCTP_DEBUG_ALL, "[BBR][Timeout] Handling timeout for net=%p\n", (void *)net);
 }
 
 static void sctp_bbr_packet_transmitted(struct sctp_tcb *stcb, struct sctp_nets *net) {

@@ -9305,10 +9305,11 @@ again_one_more_time:
 					if(net->bbr.bytes_in_flight >= bdp_bytes){
 						/* skip this net, no room for data ( bbr inflight >= cwnd_gain * bdp )*/
 						*reason_code = 3;
-						printf("[BBR][SEND]send skip net %p, inflight %llu >= cwnd_gain * bdp %u\n",
+						SCTPDBG(SCTP_DEBUG_ALL, "[BBR][SEND]send skip net %p, inflight %llu >= cwnd_gain * bdp %u\n",
 					       	(void*)net,
 					       	net->bbr.bytes_in_flight,
 					       	bdp_bytes);
+
 						break;
 					}
 					/* bbr: we are limited by pacing rate */
@@ -9316,7 +9317,10 @@ again_one_more_time:
 					if (now_usec < net->bbr.next_send_time_us) {
 						/* skip this net, no room for data ( bbr pacing rate control)*/
 						*reason_code = 3;
-						printf("[BBR][SEND][PACEING] pacing skip net %p, pacing rate controled, now %llu < next_send_time_us %llu\n", (void*)net, now_usec, net->bbr.next_send_time_us);
+						SCTPDBG(SCTP_DEBUG_ALL, "[BBR][SEND][PACEING] pacing skip net %p, pacing rate controled, now %llu < next_send_time_us %llu\n",
+					       	(void*)net,
+					       	now_usec,
+					       	net->bbr.next_send_time_us);
 						break;
 					}
 					// TODO: FoMoGoMan, properly check packet.app_limited 
