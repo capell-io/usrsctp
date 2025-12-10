@@ -984,7 +984,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 						break;
 					}
 					net->cwnd += incr;
-					printf("[CWND %d", net->cwnd);
+					// printf("[CWND %d", net->cwnd);
 					sctp_enforce_cwnd_limit(asoc, net);
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 						sctp_log_cwnd(stcb, net, incr,
@@ -1053,7 +1053,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 						break;
 					}
 					net->cwnd += incr;
-					printf("[CWND %d", net->cwnd);
+					// printf("[CWND %d", net->cwnd);
 					sctp_enforce_cwnd_limit(asoc, net);
 #if defined(__FreeBSD__) && !defined(__Userspace__)
 					SDT_PROBE5(sctp, cwnd, net, ack,
@@ -2460,7 +2460,7 @@ static void sctp_bbr_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_net
 	if (!net)
 		return;
 
-	printf("[BBR] Initializing BBR for new path\n");
+	SCTPDBG(SCTP_DEBUG_ALL, "BBR: Initializing BBR for new path\n");
 	now_us = _sctp_bbr_now_usec();
 	/* create/assign bbr */
 	b = _sctp_bbr_ensure(stcb, net);
