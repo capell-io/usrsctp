@@ -73,8 +73,6 @@ uint64_t user_bbr_now_usec(void) {
 	return (uint64_t)ts.tv_sec * 1000000ULL + ts.tv_nsec / 1000ULL;
 }
 
-/* Public API implementations */
-
 struct user_bbr *user_bbr_create(uint32_t mss_bytes, uint32_t init_cwnd_bytes, uint64_t now_us) {
 	if (now_us == 0)
 		now_us = user_bbr_now_usec();
