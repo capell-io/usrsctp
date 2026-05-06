@@ -24,9 +24,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+#endif
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -63,6 +67,16 @@ void bbr_stop_probe_rtt_timer(struct user_bbr *bbr);
 
 /* monotonic time */
 uint64_t user_bbr_now_usec(void) {
+#ifdef _WIN32
+	static LARGE_INTEGER frequency;
+	LARGE_INTEGER counter;
+
+	if (frequency.QuadPart == 0) {
+		QueryPerformanceFrequency(&frequency);
+	}
+	QueryPerformanceCounter(&counter);
+	return (uint64_t)((counter.QuadPart * 1000000ULL) / frequency.QuadPart);
+#else
 	struct timespec ts;
 	if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
 		/* fallback to gettimeofday (not monotonic) */
@@ -71,6 +85,7 @@ uint64_t user_bbr_now_usec(void) {
 		return (uint64_t)tv.tv_sec * 1000000ULL + tv.tv_usec;
 	}
 	return (uint64_t)ts.tv_sec * 1000000ULL + ts.tv_nsec / 1000ULL;
+#endif
 }
 
 struct user_bbr *user_bbr_create(uint32_t mss_bytes, uint32_t init_cwnd_bytes, uint64_t now_us) {
@@ -336,10 +351,17 @@ void user_bbr_debug_dump(const struct user_bbr *bbr, char *buf, size_t buflen) {
 
 void user_bbr_debug_dump_with_timestamp(const struct user_bbr *bbr) {
 	char buffer[512];
+#ifdef _WIN32
+	uint64_t now_us = user_bbr_now_usec();
+	user_bbr_debug_dump(bbr, buffer, sizeof(buffer));
+	printf("[BBR_DEBUG][%" PRIu64 ".%06u] %s\n", now_us / 1000000ULL,
+	       (unsigned)(now_us % 1000000ULL), buffer);
+#else
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	user_bbr_debug_dump(bbr, buffer, sizeof(buffer));
 	printf("[BBR_DEBUG][%ld.%06d] %s\n", tv.tv_sec, (int)tv.tv_usec, buffer);
+#endif
 }
 
 

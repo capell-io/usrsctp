@@ -2413,10 +2413,7 @@ sctp_htcp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb,
 
 /* helpers to get monotonic time in microseconds */
 static uint64_t _sctp_bbr_now_usec(void) {
-	struct timespec ts;
-	/* CLOCK_MONOTONIC gives monotonic time independent of wallclock changes */
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	return (uint64_t)ts.tv_sec * 1000000ULL + (uint64_t)(ts.tv_nsec / 1000ULL);
+	return user_bbr_now_usec();
 }
 
 /* Helper: get bbr pointer from net  */
@@ -2775,4 +2772,3 @@ const struct sctp_cc_functions sctp_cc_functions[] = {
      sctp_bbr_packet_transmitted, sctp_bbr_tsn_acknowledged, sctp_bbr_new_transmission_begins,
      sctp_bbr_prepare_net_for_sack, sctp_bbr_socket_option, sctp_bbr_rtt_calculated
 }};
-
