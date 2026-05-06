@@ -177,7 +177,6 @@ list(APPEND usrsctp_sources
 	netinet/sctp_userspace.c
 	netinet/sctp_usrreq.c
 	netinet/sctputil.c
-	netinet/bbr.c
 	netinet6/sctp6_usrreq.c
 	user_environment.c
 	user_mbuf.c
